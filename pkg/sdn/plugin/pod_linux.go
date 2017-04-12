@@ -371,6 +371,27 @@ func (m *podManager) ipamGarbageCollection() {
 	}
 }
 
+
+// LinkSetAlias sets the alias of the link device.
+// Equivalent to: `ip link set dev $link alias $name`
+func LinkSetAlias(link Link, name string) error {
+
+	base := link.Attrs()
+	h.ensureIndex(base)
+	req := h.newNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
+
+	msg := nl.NewIfInfomsg(syscall.AF_UNSPEC)
+	msg.Index = int32(base.Index)
+	req.AddData(msg)
+
+	data := nl.NewRtAttr(syscall.IFLA_IFALIAS, []byte(name))
+	req.AddData(data)
+
+	_, err := req.Execute(syscall.NETLINK_ROUTE, 0)
+	return err
+}
+
+
 // Set up all networking (host/container veth, OVS flows, IPAM, loopback, etc)
 func (m *podManager) setup(req *cniserver.PodRequest) (*cnitypes.Result, *runningPod, error) {
 	pod, err := m.kClient.Pods(req.PodNamespace).Get(req.PodName)
@@ -436,6 +457,28 @@ func (m *podManager) setup(req *cniserver.PodRequest) (*cnitypes.Result, *runnin
 		if err != nil {
 			return fmt.Errorf("failed to configure container loopback: %v", err)
 		}
+
+
+
+
+		// Add netlink alias to pod veth interface with coorisponding hostVeth
+		err = LinkSetAlias(contVeth, hostVeth.Attrs().Name)
+		if err != nil {
+		  glog.Errorf("Could not set alias \"hostVeth.Attrs().Name\" for containers veth interface \"%s\": %v", podInterfaceName, err)
+		}else{
+                  glog.V(2).Infof("____ LinkSetAlias added alias %s:%s", hostVeth.Attrs().Name, podInterfaceName)
+                }
+
+		// req.PodNam
+		// Add netlink alias to host veth interface with coorisponding pod continaer id
+		err = LinkSetAlias(hostVeth, req.ContainerId)
+		if err != nil {
+		  glog.Errorf("Could not set alias \"req.ContainerId\" for containers veth interface \"%s\": %v", hostVeth.Attrs().Name, err)
+		}else{
+                  glog.V(2).Infof("____ LinkSetAlias added alias %s:%s", hostVeth.Attrs().Name, req.ContainerId)
+                }
+
+
 
 		hostVethName = hostVeth.Attrs().Name
 		contVethMac = contVeth.Attrs().HardwareAddr.String()
