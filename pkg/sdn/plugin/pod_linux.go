@@ -374,7 +374,7 @@ func (m *podManager) ipamGarbageCollection() {
 
 // LinkSetAlias sets the alias of the link device.
 // Equivalent to: `ip link set dev $link alias $name`
-func LinkSetAlias(link Link, name string) error {
+func LinkSetAlias(link netlink.Link, name string) error {
 
 	base := link.Attrs()
 	h.ensureIndex(base)
