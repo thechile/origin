@@ -375,7 +375,12 @@ func (m *podManager) ipamGarbageCollection() {
 // LinkSetAlias sets the alias of the link device.
 // Equivalent to: `ip link set dev $link alias $name`
 func LinkSetAlias(link netlink.Link, name string) error {
+	return netlink.pkgHandle.LinkSetAlias(link, name)
+}
 
+// LinkSetAlias sets the alias of the link device.
+// Equivalent to: `ip link set dev $link alias $name`
+func (h *Handle) LinkSetAlias(link Link, name string) error {
 	base := link.Attrs()
 	h.ensureIndex(base)
 	req := h.newNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
@@ -390,6 +395,8 @@ func LinkSetAlias(link netlink.Link, name string) error {
 	_, err := req.Execute(syscall.NETLINK_ROUTE, 0)
 	return err
 }
+
+
 
 
 // Set up all networking (host/container veth, OVS flows, IPAM, loopback, etc)
